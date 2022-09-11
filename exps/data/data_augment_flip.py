@@ -178,6 +178,8 @@ class TrainTransform:
         labels = targets[:, 4].copy()
         if len(boxes) == 0:
             targets = np.zeros((self.max_labels, 5), dtype=np.float32)
+            ### TODOlcy 这里有个小bug
+            ### 当图片不存在gt的时候，跳过了mirror，造成t-1和t的mirror操作不一致，尽管这种case在数据集中出现的很少
             image, r_o = preproc(image, input_dim)
             return image, targets
 
@@ -233,7 +235,20 @@ class DoubleTrainTransform:
         img2, label2 = self.trasform2(image[1], targets[1], input_dim, mirror=a)
         return img1, img2, label1, label2
 
+class TripleTrainTransform:
+    def __init__(self, max_labels=50, hsv=True, flip=True):
+        self.max_labels = max_labels
+        self.trasform1 = TrainTransform(max_labels=max_labels, hsv=hsv, flip=flip)
+        self.trasform2 = TrainTransform(max_labels=max_labels, hsv=hsv, flip=flip)
+        self.trasform3 = TrainTransform(max_labels=max_labels, hsv=hsv, flip=flip)
 
+    def __call__(self, image, targets, input_dim):
+        a = random.randrange(2)
+        img1, label1 = self.trasform1(image[0], targets[0], input_dim, mirror=a)
+        img2, label2 = self.trasform2(image[1], targets[1], input_dim, mirror=a)
+        # t-2没有对应的targets需要处理，这里使用targets[1]，仅为了方便调用self.trasform3函数
+        img3, label3 = self.trasform3(image[2], targets[1], input_dim, mirror=a)
+        return img1, img2, img3, label1, label2
 
 
 class ValTransform:
@@ -273,3 +288,17 @@ class DoubleValTransform:
         img1, label1 = self.trasform1(img[0], res[0], input_size)
         img2, label2 = self.trasform2(img[1], res[1], input_size)
         return img1, img2, label1, label2
+
+
+class TripleValTransform:
+    def __init__(self, swap=(2, 0, 1)):
+        self.trasform1 = ValTransform(swap=swap)
+        self.trasform2 = ValTransform(swap=swap)
+        self.trasform3 = ValTransform(swap=swap)
+
+    def __call__(self, img, res, input_size):
+        img1, label1 = self.trasform1(img[0], res[0], input_size)
+        img2, label2 = self.trasform2(img[1], res[1], input_size)
+        img3, label3 = self.trasform3(img[2], res[1], input_size)
+
+        return img1, img2, img3, label1, label2
