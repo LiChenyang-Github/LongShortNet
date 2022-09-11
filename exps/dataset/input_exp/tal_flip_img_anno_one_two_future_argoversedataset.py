@@ -30,7 +30,7 @@ class IMG_ANNO_ONE_TWO_ARGOVERSEDataset(Dataset):
     def __init__(self, data_dir='/data/Datasets/', json_file='train.json',
                  name='train', img_size=(416,416), preproc=None, cache=False, 
                  speed_prob={SpeedType.ONEX.value: 0.5, SpeedType.TWOX.value: 0.5}, 
-                 speed_prob_seed=333):
+                 speed_prob_seed=0):
         """
         COCO dataset initialization. Annotation data are read into memory by COCO API.
         Args:
@@ -398,7 +398,8 @@ class IMG_ANNO_ONE_TWO_ARGOVERSEDataset(Dataset):
             if random_num < accumulate_num:
                 speed_type_name = k
                 break
-        annotations = copy.deepcopy(self.speed_to_annos[speed_type_name])
+        # annotations = copy.deepcopy(self.speed_to_annos[speed_type_name])
+        annotations = self.speed_to_annos[speed_type_name]
         return annotations
 
     @Dataset.mosaic_getitem

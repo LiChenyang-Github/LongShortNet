@@ -33,7 +33,7 @@ class IMG_ANNO_ONE_TWO_THREE_ARGOVERSEDataset(Dataset):
                  speed_prob={SpeedType.ONEX.value: 0.4, 
                              SpeedType.TWOX.value: 0.3,
                              SpeedType.THREEX.value: 0.3}, 
-                 speed_prob_seed=333):
+                 speed_prob_seed=0):
         """
         COCO dataset initialization. Annotation data are read into memory by COCO API.
         Args:
@@ -562,7 +562,8 @@ class IMG_ANNO_ONE_TWO_THREE_ARGOVERSEDataset(Dataset):
             if random_num < accumulate_num:
                 speed_type_name = k
                 break
-        annotations = copy.deepcopy(self.speed_to_annos[speed_type_name])
+        # annotations = copy.deepcopy(self.speed_to_annos[speed_type_name])
+        annotations = self.speed_to_annos[speed_type_name]
         return annotations
 
     @Dataset.mosaic_getitem
