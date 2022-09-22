@@ -223,6 +223,7 @@ class TrainTransform:
         padded_labels = np.ascontiguousarray(padded_labels, dtype=np.float32)
         return image_t, padded_labels
 
+
 class DoubleTrainTransform:
     def __init__(self, max_labels=50, hsv=True, flip=True):
         self.max_labels = max_labels
@@ -234,6 +235,7 @@ class DoubleTrainTransform:
         img1, label1 = self.trasform1(image[0], targets[0], input_dim, mirror=a)
         img2, label2 = self.trasform2(image[1], targets[1], input_dim, mirror=a)
         return img1, img2, label1, label2
+
 
 class TripleTrainTransform:
     def __init__(self, max_labels=50, hsv=True, flip=True):
@@ -249,6 +251,32 @@ class TripleTrainTransform:
         # t-2没有对应的targets需要处理，这里使用targets[1]，仅为了方便调用self.trasform3函数
         img3, label3 = self.trasform3(image[2], targets[1], input_dim, mirror=a)
         return img1, img2, img3, label1, label2
+
+
+class LongShortTrainTransform:
+    def __init__(self, max_labels=50, hsv=True, flip=True, short_frame_num=2, long_frame_num=2):
+        assert short_frame_num == 2
+        self.max_labels = max_labels
+        self.short_transforms = [TrainTransform(max_labels=max_labels, hsv=hsv, flip=flip) for _ in range(short_frame_num)]
+        self.long_transforms = [TrainTransform(max_labels=max_labels, hsv=hsv, flip=flip) for _ in range(long_frame_num)]
+
+    def __call__(self, short_images, long_images, targets, input_dim):
+        a = random.randrange(2)
+        short_res = []
+        long_res = []
+
+        for i, trans_func in enumerate(self.short_transforms):
+            cur_res = trans_func(short_images[i], targets[i], input_dim, mirror=a)
+            short_res.append(cur_res)
+
+        for i, trans_func in enumerate(self.long_transforms):
+            cur_res = trans_func(long_images[i], targets[1], input_dim, mirror=a)
+            long_res.append(cur_res)
+
+        short_imgs = [x[0] for x in short_res]
+        long_imgs = [x[0] for x in long_res]
+
+        return short_imgs, long_imgs, short_res[0][1], short_res[1][1]
 
 
 class ValTransform:
@@ -302,3 +330,28 @@ class TripleValTransform:
         img3, label3 = self.trasform3(img[2], res[1], input_size)
 
         return img1, img2, img3, label1, label2
+
+
+class LongShortValTransform:
+    def __init__(self, swap=(2, 0, 1), short_frame_num=2, long_frame_num=2):
+        assert short_frame_num == 2
+        self.short_transforms = [ValTransform(swap=swap) for _ in range(short_frame_num)]
+        self.long_transforms = [ValTransform(swap=swap) for _ in range(long_frame_num)]
+
+    def __call__(self, short_images, long_images, res, input_size):
+        
+        short_res = []
+        long_res = []
+
+        for i, trans_func in enumerate(self.short_transforms):
+            cur_res = trans_func(short_images[i], res[i], input_size)
+            short_res.append(cur_res)
+
+        for i, trans_func in enumerate(self.long_transforms):
+            cur_res = trans_func(long_images[i], res[1], input_size)
+            long_res.append(cur_res)
+
+        short_imgs = [x[0] for x in short_res]
+        long_imgs = [x[0] for x in long_res]
+
+        return short_imgs, long_imgs, short_res[0][1], short_res[1][1]
