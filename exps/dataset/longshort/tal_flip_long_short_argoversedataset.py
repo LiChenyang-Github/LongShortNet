@@ -330,4 +330,7 @@ class LONGSHORT_ARGOVERSEDataset(Dataset):
             short_imgs, long_imgs, target, support_target = self.preproc(short_imgs, long_imgs, (target, support_target), self.input_dim)
 
         # return np.concatenate((img, support_img), axis=0), (target, support_target), img_info, img_id
-        return np.concatenate(short_imgs, axis=0), np.concatenate(long_imgs, axis=0), (target, support_target), img_info, img_id
+        if len(long_imgs) > 0:
+            return np.concatenate(short_imgs, axis=0), np.concatenate(long_imgs, axis=0), (target, support_target), img_info, img_id
+        else: # 不使用long支路的情况
+            return np.concatenate(short_imgs, axis=0), np.zeros((0, )), (target, support_target), img_info, img_id

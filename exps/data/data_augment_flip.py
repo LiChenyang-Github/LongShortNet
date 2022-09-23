@@ -255,8 +255,9 @@ class TripleTrainTransform:
 
 class LongShortTrainTransform:
     def __init__(self, max_labels=50, hsv=True, flip=True, short_frame_num=2, long_frame_num=2):
-        assert short_frame_num == 2
         self.max_labels = max_labels
+        self.short_frame_num = short_frame_num
+        self.long_frame_num = long_frame_num
         self.short_transforms = [TrainTransform(max_labels=max_labels, hsv=hsv, flip=flip) for _ in range(short_frame_num)]
         self.long_transforms = [TrainTransform(max_labels=max_labels, hsv=hsv, flip=flip) for _ in range(long_frame_num)]
 
@@ -266,8 +267,14 @@ class LongShortTrainTransform:
         long_res = []
 
         for i, trans_func in enumerate(self.short_transforms):
-            cur_res = trans_func(short_images[i], targets[i], input_dim, mirror=a)
+            cur_res = trans_func(short_images[i], 
+                                 targets[min(i, 1)], 
+                                 input_dim, 
+                                 mirror=a)
             short_res.append(cur_res)
+
+        if self.short_frame_num == 1:
+            support_res = trans_func(short_images[0].copy(), targets[1], input_dim, mirror=a)
 
         for i, trans_func in enumerate(self.long_transforms):
             cur_res = trans_func(long_images[i], targets[1], input_dim, mirror=a)
@@ -276,7 +283,7 @@ class LongShortTrainTransform:
         short_imgs = [x[0] for x in short_res]
         long_imgs = [x[0] for x in long_res]
 
-        return short_imgs, long_imgs, short_res[0][1], short_res[1][1]
+        return short_imgs, long_imgs, short_res[0][1], short_res[1][1] if self.short_frame_num > 1 else support_res[1]
 
 
 class ValTransform:
@@ -334,18 +341,22 @@ class TripleValTransform:
 
 class LongShortValTransform:
     def __init__(self, swap=(2, 0, 1), short_frame_num=2, long_frame_num=2):
-        assert short_frame_num == 2
+        self.short_frame_num = short_frame_num
+        self.long_frame_num = long_frame_num
         self.short_transforms = [ValTransform(swap=swap) for _ in range(short_frame_num)]
         self.long_transforms = [ValTransform(swap=swap) for _ in range(long_frame_num)]
 
     def __call__(self, short_images, long_images, res, input_size):
-        
+
         short_res = []
         long_res = []
 
         for i, trans_func in enumerate(self.short_transforms):
-            cur_res = trans_func(short_images[i], res[i], input_size)
+            cur_res = trans_func(short_images[i], res[min(i, 1)], input_size)
             short_res.append(cur_res)
+
+        if self.short_frame_num == 1:
+            support_res = trans_func(short_images[0].copy(), res[1], input_size)
 
         for i, trans_func in enumerate(self.long_transforms):
             cur_res = trans_func(long_images[i], res[1], input_size)
@@ -354,4 +365,4 @@ class LongShortValTransform:
         short_imgs = [x[0] for x in short_res]
         long_imgs = [x[0] for x in long_res]
 
-        return short_imgs, long_imgs, short_res[0][1], short_res[1][1]
+        return short_imgs, long_imgs, short_res[0][1], short_res[1][1] if self.short_frame_num > 1 else support_res[1]

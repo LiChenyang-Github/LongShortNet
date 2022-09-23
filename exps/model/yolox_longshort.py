@@ -27,7 +27,8 @@ class YOLOXLONGSHORT(nn.Module):
         merge_form="add", 
         in_channels=[256, 512, 1024], 
         width=1.0, 
-        act="silu"
+        act="silu",
+        with_short_cut=False,
     ):
         """Summary
         
@@ -49,6 +50,7 @@ class YOLOXLONGSHORT(nn.Module):
         self.head = head
         self.merge_form = merge_form
         self.in_channels = in_channels
+        self.with_short_cut = with_short_cut
         if merge_form == "concat":
             self.jian2 = BaseConv(
                         in_channels=int(in_channels[0] * width),
@@ -79,20 +81,35 @@ class YOLOXLONGSHORT(nn.Module):
         assert mode in ['off_pipe', 'on_pipe']
 
         if mode == 'off_pipe':
-            short_fpn_outs = self.short_backbone(x[0], buffer=buffer, mode='off_pipe')
+            short_fpn_outs, rurrent_pan_outs = self.short_backbone(x[0], buffer=buffer, mode='off_pipe')
             long_fpn_outs = self.long_backbone(x[1], buffer=buffer, mode='off_pipe') if self.long_backbone is not None else None
-            if self.long_backbone is None:
-                fpn_outs = short_fpn_outs
-            else:
-                if self.merge_form == "add":
-                    fpn_outs = [x + y for x, y in zip(short_fpn_outs, long_fpn_outs)]
-                elif self.merge_form == "concat":
-                    fpn_outs_2 = torch.cat([self.jian2(short_fpn_outs[0]), self.jian2(long_fpn_outs[0])], dim=1)
-                    fpn_outs_1 = torch.cat([self.jian1(short_fpn_outs[1]), self.jian1(long_fpn_outs[1])], dim=1)
-                    fpn_outs_0 = torch.cat([self.jian0(short_fpn_outs[2]), self.jian0(long_fpn_outs[2])], dim=1)
-                    fpn_outs = (fpn_outs_2, fpn_outs_1, fpn_outs_0)
+            if not self.with_short_cut:
+                if self.long_backbone is None:
+                    fpn_outs = short_fpn_outs
                 else:
-                    raise Exception(f'merge_form must be in ["add", "concat"]')
+                    if self.merge_form == "add":
+                        fpn_outs = [x + y for x, y in zip(short_fpn_outs, long_fpn_outs)]
+                    elif self.merge_form == "concat":
+                        fpn_outs_2 = torch.cat([self.jian2(short_fpn_outs[0]), self.jian2(long_fpn_outs[0])], dim=1)
+                        fpn_outs_1 = torch.cat([self.jian1(short_fpn_outs[1]), self.jian1(long_fpn_outs[1])], dim=1)
+                        fpn_outs_0 = torch.cat([self.jian0(short_fpn_outs[2]), self.jian0(long_fpn_outs[2])], dim=1)
+                        fpn_outs = (fpn_outs_2, fpn_outs_1, fpn_outs_0)
+                    else:
+                        raise Exception(f'merge_form must be in ["add", "concat"]')
+            else:
+                if self.long_backbone is None:
+                    fpn_outs = [x + y for x, y in zip(short_fpn_outs, rurrent_pan_outs)]
+                else:
+                    if self.merge_form == "add":
+                        fpn_outs = [x + y + z for x, y, z in zip(short_fpn_outs, long_fpn_outs, rurrent_pan_outs)]
+                    elif self.merge_form == "concat":
+                        fpn_outs_2 = torch.cat([self.jian2(short_fpn_outs[0]), self.jian2(long_fpn_outs[0])], dim=1)
+                        fpn_outs_1 = torch.cat([self.jian1(short_fpn_outs[1]), self.jian1(long_fpn_outs[1])], dim=1)
+                        fpn_outs_0 = torch.cat([self.jian0(short_fpn_outs[2]), self.jian0(long_fpn_outs[2])], dim=1)
+                        fpn_outs = (fpn_outs_2, fpn_outs_1, fpn_outs_0)
+                        fpn_outs = [x + y for x, y in zip(fpn_outs, rurrent_pan_outs)]
+                    else:
+                        raise Exception(f'merge_form must be in ["add", "concat"]')
 
             if self.training:
                 assert targets is not None

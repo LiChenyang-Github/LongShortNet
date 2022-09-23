@@ -662,7 +662,10 @@ class LongShortMosaicDetection(Dataset):
             short_imgs, long_imgs, label, support_label, img_info, id_ = self._dataset.pull_item(idx)
             short_imgs, long_imgs, label, support_label = self.preproc(short_imgs, long_imgs, (label, support_label), self.input_dim)
             # return np.concatenate((img, support_img), axis=0), (label, support_label), img_info, id_
-            return np.concatenate(short_imgs, axis=0), np.concatenate(long_imgs, axis=0), (label, support_label), img_info, id_
+            if len(long_imgs) > 0:
+                return np.concatenate(short_imgs, axis=0), np.concatenate(long_imgs, axis=0), (label, support_label), img_info, id_
+            else: # 不使用long支路的情况
+                return np.concatenate(short_imgs, axis=0), np.zeros((0, )), (label, support_label), img_info, id_
             # return np.zeros(np.concatenate(short_imgs, axis=0).shape, dtype=np.float32), np.ones(np.concatenate(long_imgs, axis=0).shape, dtype=np.float32), (label, support_label), img_info, id_
 
 
