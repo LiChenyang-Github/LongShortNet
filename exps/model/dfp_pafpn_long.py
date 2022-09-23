@@ -24,12 +24,14 @@ class DFPPAFPNLONG(nn.Module):
         depthwise=False,
         act="silu",
         frame_num=2,
+        with_short_cut=True,
     ):
         super().__init__()
         self.backbone = CSPDarknet(depth, width, depthwise=depthwise, act=act)
         self.in_features = in_features
         self.in_channels = in_channels
         self.frame_num = frame_num
+        self.with_short_cut = with_short_cut
         self.need_aux_layers = [not (x % frame_num == 0) for x in in_channels]
         Conv = DWConv if depthwise else BaseConv
 
@@ -201,12 +203,20 @@ class DFPPAFPNLONG(nn.Module):
             support_pan_out1s.append(support_pan_out1)
             support_pan_out0s.append(support_pan_out0)
 
-        pan_out2 = (torch.cat([self.jian2(rurrent_pan_out2), *[self.jian2(x) for x in support_pan_out2s]], dim=1) + rurrent_pan_out2 if not self.need_aux_layers[0] else 
-                    torch.cat([self.jian2_aux(rurrent_pan_out2), *[self.jian2(x) for x in support_pan_out2s]], dim=1) + rurrent_pan_out2)
-        pan_out1 = (torch.cat([self.jian1(rurrent_pan_out1), *[self.jian1(x) for x in support_pan_out1s]], dim=1) + rurrent_pan_out1 if not self.need_aux_layers[1] else 
-                    torch.cat([self.jian1_aux(rurrent_pan_out1), *[self.jian1(x) for x in support_pan_out1s]], dim=1) + rurrent_pan_out1)
-        pan_out0 = (torch.cat([self.jian0(rurrent_pan_out0), *[self.jian0(x) for x in support_pan_out0s]], dim=1) + rurrent_pan_out0 if not self.need_aux_layers[2] else 
-                    torch.cat([self.jian0_aux(rurrent_pan_out0), *[self.jian0(x) for x in support_pan_out0s]], dim=1) + rurrent_pan_out0)
+        if self.with_short_cut:
+            pan_out2 = (torch.cat([self.jian2(rurrent_pan_out2), *[self.jian2(x) for x in support_pan_out2s]], dim=1) + rurrent_pan_out2 if not self.need_aux_layers[0] else 
+                        torch.cat([self.jian2_aux(rurrent_pan_out2), *[self.jian2(x) for x in support_pan_out2s]], dim=1) + rurrent_pan_out2)
+            pan_out1 = (torch.cat([self.jian1(rurrent_pan_out1), *[self.jian1(x) for x in support_pan_out1s]], dim=1) + rurrent_pan_out1 if not self.need_aux_layers[1] else 
+                        torch.cat([self.jian1_aux(rurrent_pan_out1), *[self.jian1(x) for x in support_pan_out1s]], dim=1) + rurrent_pan_out1)
+            pan_out0 = (torch.cat([self.jian0(rurrent_pan_out0), *[self.jian0(x) for x in support_pan_out0s]], dim=1) + rurrent_pan_out0 if not self.need_aux_layers[2] else 
+                        torch.cat([self.jian0_aux(rurrent_pan_out0), *[self.jian0(x) for x in support_pan_out0s]], dim=1) + rurrent_pan_out0)
+        else:
+            pan_out2 = (torch.cat([self.jian2(rurrent_pan_out2), *[self.jian2(x) for x in support_pan_out2s]], dim=1) if not self.need_aux_layers[0] else 
+                        torch.cat([self.jian2_aux(rurrent_pan_out2), *[self.jian2(x) for x in support_pan_out2s]], dim=1))
+            pan_out1 = (torch.cat([self.jian1(rurrent_pan_out1), *[self.jian1(x) for x in support_pan_out1s]], dim=1) if not self.need_aux_layers[1] else 
+                        torch.cat([self.jian1_aux(rurrent_pan_out1), *[self.jian1(x) for x in support_pan_out1s]], dim=1))
+            pan_out0 = (torch.cat([self.jian0(rurrent_pan_out0), *[self.jian0(x) for x in support_pan_out0s]], dim=1) if not self.need_aux_layers[2] else 
+                        torch.cat([self.jian0_aux(rurrent_pan_out0), *[self.jian0(x) for x in support_pan_out0s]], dim=1))
 
         outputs = (pan_out2, pan_out1, pan_out0)
 
@@ -275,7 +285,7 @@ class DFPPAFPNLONG(nn.Module):
                 input = torch.cat([input, input], dim=1)
                 output = self.off_forward(input)
             # offline train mode
-            elif input.size()[1] == 6:
+            else:
                 output = self.off_forward(input)
             
             return output
