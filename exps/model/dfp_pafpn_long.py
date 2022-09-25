@@ -32,7 +32,7 @@ class DFPPAFPNLONG(nn.Module):
         self.in_channels = in_channels
         self.frame_num = frame_num
         self.with_short_cut = with_short_cut
-        self.need_aux_layers = [not (x % frame_num == 0) for x in in_channels]
+        self.need_aux_layers = [not (x * width % frame_num == 0) for x in in_channels]
         Conv = DWConv if depthwise else BaseConv
 
         self.lateral_conv0 = BaseConv(
