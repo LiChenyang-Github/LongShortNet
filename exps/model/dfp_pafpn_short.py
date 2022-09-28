@@ -26,6 +26,7 @@ class DFPPAFPNSHORT(nn.Module):
         frame_num=2,
         with_short_cut=True,
         avg_channel=True, # 是否所有通道平均，False当前帧占一半通道
+        dynamic_fusion=False, # 对除了当前帧的其它帧进一步融合，如果为True，则不使用aux layers
     ):
         super().__init__()
         self.backbone = CSPDarknet(depth, width, depthwise=depthwise, act=act)
@@ -34,6 +35,9 @@ class DFPPAFPNSHORT(nn.Module):
         self.frame_num = frame_num
         self.with_short_cut = with_short_cut
         self.avg_channel = avg_channel
+        self.dynamic_fusion = dynamic_fusion
+        if self.dynamic_fusion:
+            assert frame_num > 1
         self.need_aux_layers = ([not (x * width % frame_num == 0) for x in in_channels]
                                 if self.avg_channel else
                                 [not (x // 2 * width % (frame_num - 1) == 0) for x in in_channels])
@@ -114,7 +118,7 @@ class DFPPAFPNSHORT(nn.Module):
                         act=act,
                     )
 
-            if self.need_aux_layers[0]:
+            if not self.dynamic_fusion and self.need_aux_layers[0]:
                 self.jian2_aux = Conv(
                             in_channels=int(in_channels[0] * width),
                             out_channels=int(in_channels[0] * width) // frame_num + int(in_channels[0] * width) % frame_num,
@@ -123,7 +127,7 @@ class DFPPAFPNSHORT(nn.Module):
                             act=act,
                         )
         
-            if self.need_aux_layers[1]:
+            if not self.dynamic_fusion and self.need_aux_layers[1]:
                 self.jian1_aux = Conv(
                             in_channels=int(in_channels[1] * width),
                             out_channels=int(in_channels[1] * width) // frame_num + int(in_channels[1] * width) % frame_num,
@@ -132,10 +136,35 @@ class DFPPAFPNSHORT(nn.Module):
                             act=act,
                         )
 
-            if self.need_aux_layers[2]:
+            if not self.dynamic_fusion and self.need_aux_layers[2]:
                 self.jian0_aux = Conv(
                             in_channels=int(in_channels[2] * width),
                             out_channels=int(in_channels[2] * width) // frame_num + int(in_channels[2] * width) % frame_num,
+                            ksize=1,
+                            stride=1,
+                            act=act,
+                        )
+
+            if self.dynamic_fusion:
+                self.jian2_dynamic_fusion = Conv(
+                            in_channels=int(in_channels[0] * width) // frame_num * (frame_num - 1),
+                            out_channels=int(in_channels[0] * width) - (int(in_channels[0] * width) // frame_num),
+                            ksize=1,
+                            stride=1,
+                            act=act,
+                        )
+
+                self.jian1_dynamic_fusion = Conv(
+                            in_channels=int(in_channels[1] * width) // frame_num * (frame_num - 1),
+                            out_channels=int(in_channels[1] * width) - (int(in_channels[1] * width) // frame_num),
+                            ksize=1,
+                            stride=1,
+                            act=act,
+                        )
+
+                self.jian0_dynamic_fusion = Conv(
+                            in_channels=int(in_channels[2] * width) // frame_num * (frame_num - 1),
+                            out_channels=int(in_channels[2] * width) - (int(in_channels[2] * width) // frame_num),
                             ksize=1,
                             stride=1,
                             act=act,
@@ -189,7 +218,7 @@ class DFPPAFPNSHORT(nn.Module):
                         act=act,
                     )
 
-            if self.need_aux_layers[0]:
+            if not self.dynamic_fusion and self.need_aux_layers[0]:
                 self.jian2_dynamic_aux = Conv(
                             in_channels=int(in_channels[0] * width),
                             out_channels=int(in_channels[0] * width) // 2 // (frame_num - 1) + int(in_channels[0] * width) // 2 % (frame_num - 1),
@@ -198,7 +227,7 @@ class DFPPAFPNSHORT(nn.Module):
                             act=act,
                         )
         
-            if self.need_aux_layers[1]:
+            if not self.dynamic_fusion and self.need_aux_layers[1]:
                 self.jian1_dynamic_aux = Conv(
                             in_channels=int(in_channels[1] * width),
                             out_channels=int(in_channels[1] * width) // 2 // (frame_num - 1) + int(in_channels[1] * width) // 2 % (frame_num - 1),
@@ -207,10 +236,35 @@ class DFPPAFPNSHORT(nn.Module):
                             act=act,
                         )
 
-            if self.need_aux_layers[2]:
+            if not self.dynamic_fusion and self.need_aux_layers[2]:
                 self.jian0_dynamic_aux = Conv(
                             in_channels=int(in_channels[2] * width),
                             out_channels=int(in_channels[2] * width) // 2 // (frame_num - 1) + int(in_channels[2] * width) // 2 % (frame_num - 1),
+                            ksize=1,
+                            stride=1,
+                            act=act,
+                        )
+
+            if self.dynamic_fusion:
+                self.jian2_dynamic_fusion = Conv(
+                            in_channels=int(in_channels[0] * width) // 2 // (frame_num - 1) * (frame_num - 1),
+                            out_channels=int(in_channels[0] * width) // 2,
+                            ksize=1,
+                            stride=1,
+                            act=act,
+                        )
+
+                self.jian1_dynamic_fusion = Conv(
+                            in_channels=int(in_channels[1] * width) // 2 // (frame_num - 1) * (frame_num - 1),
+                            out_channels=int(in_channels[1] * width) // 2,
+                            ksize=1,
+                            stride=1,
+                            act=act,
+                        )
+
+                self.jian0_dynamic_fusion = Conv(
+                            in_channels=int(in_channels[2] * width) // 2 // (frame_num - 1) * (frame_num - 1),
+                            out_channels=int(in_channels[2] * width) // 2,
                             ksize=1,
                             stride=1,
                             act=act,
@@ -282,37 +336,56 @@ class DFPPAFPNSHORT(nn.Module):
             support_pan_out1s.append(support_pan_out1)
             support_pan_out0s.append(support_pan_out0)
 
-        if self.avg_channel:
-            if self.with_short_cut:
-                pan_out2 = (torch.cat([self.jian2(rurrent_pan_out2), *[self.jian2(x) for x in support_pan_out2s]], dim=1) + rurrent_pan_out2 if not self.need_aux_layers[0] else 
-                            torch.cat([self.jian2_aux(rurrent_pan_out2), *[self.jian2(x) for x in support_pan_out2s]], dim=1) + rurrent_pan_out2)
-                pan_out1 = (torch.cat([self.jian1(rurrent_pan_out1), *[self.jian1(x) for x in support_pan_out1s]], dim=1) + rurrent_pan_out1 if not self.need_aux_layers[1] else 
-                            torch.cat([self.jian1_aux(rurrent_pan_out1), *[self.jian1(x) for x in support_pan_out1s]], dim=1) + rurrent_pan_out1)
-                pan_out0 = (torch.cat([self.jian0(rurrent_pan_out0), *[self.jian0(x) for x in support_pan_out0s]], dim=1) + rurrent_pan_out0 if not self.need_aux_layers[2] else 
-                            torch.cat([self.jian0_aux(rurrent_pan_out0), *[self.jian0(x) for x in support_pan_out0s]], dim=1) + rurrent_pan_out0)
+        if not self.dynamic_fusion:
+            if self.avg_channel:
+                if self.with_short_cut:
+                    pan_out2 = (torch.cat([self.jian2(rurrent_pan_out2), *[self.jian2(x) for x in support_pan_out2s]], dim=1) + rurrent_pan_out2 if not self.need_aux_layers[0] else 
+                                torch.cat([self.jian2_aux(rurrent_pan_out2), *[self.jian2(x) for x in support_pan_out2s]], dim=1) + rurrent_pan_out2)
+                    pan_out1 = (torch.cat([self.jian1(rurrent_pan_out1), *[self.jian1(x) for x in support_pan_out1s]], dim=1) + rurrent_pan_out1 if not self.need_aux_layers[1] else 
+                                torch.cat([self.jian1_aux(rurrent_pan_out1), *[self.jian1(x) for x in support_pan_out1s]], dim=1) + rurrent_pan_out1)
+                    pan_out0 = (torch.cat([self.jian0(rurrent_pan_out0), *[self.jian0(x) for x in support_pan_out0s]], dim=1) + rurrent_pan_out0 if not self.need_aux_layers[2] else 
+                                torch.cat([self.jian0_aux(rurrent_pan_out0), *[self.jian0(x) for x in support_pan_out0s]], dim=1) + rurrent_pan_out0)
+                else:
+                    pan_out2 = (torch.cat([self.jian2(rurrent_pan_out2), *[self.jian2(x) for x in support_pan_out2s]], dim=1) if not self.need_aux_layers[0] else 
+                                torch.cat([self.jian2_aux(rurrent_pan_out2), *[self.jian2(x) for x in support_pan_out2s]], dim=1))
+                    pan_out1 = (torch.cat([self.jian1(rurrent_pan_out1), *[self.jian1(x) for x in support_pan_out1s]], dim=1) if not self.need_aux_layers[1] else 
+                                torch.cat([self.jian1_aux(rurrent_pan_out1), *[self.jian1(x) for x in support_pan_out1s]], dim=1))
+                    pan_out0 = (torch.cat([self.jian0(rurrent_pan_out0), *[self.jian0(x) for x in support_pan_out0s]], dim=1) if not self.need_aux_layers[2] else 
+                                torch.cat([self.jian0_aux(rurrent_pan_out0), *[self.jian0(x) for x in support_pan_out0s]], dim=1))
             else:
-                pan_out2 = (torch.cat([self.jian2(rurrent_pan_out2), *[self.jian2(x) for x in support_pan_out2s]], dim=1) if not self.need_aux_layers[0] else 
-                            torch.cat([self.jian2_aux(rurrent_pan_out2), *[self.jian2(x) for x in support_pan_out2s]], dim=1))
-                pan_out1 = (torch.cat([self.jian1(rurrent_pan_out1), *[self.jian1(x) for x in support_pan_out1s]], dim=1) if not self.need_aux_layers[1] else 
-                            torch.cat([self.jian1_aux(rurrent_pan_out1), *[self.jian1(x) for x in support_pan_out1s]], dim=1))
-                pan_out0 = (torch.cat([self.jian0(rurrent_pan_out0), *[self.jian0(x) for x in support_pan_out0s]], dim=1) if not self.need_aux_layers[2] else 
-                            torch.cat([self.jian0_aux(rurrent_pan_out0), *[self.jian0(x) for x in support_pan_out0s]], dim=1))
-        else:
-            if self.with_short_cut:
-                pan_out2 = (torch.cat([self.jian2_static(rurrent_pan_out2), *[self.jian2_dynamic(x) for x in support_pan_out2s]], dim=1) + rurrent_pan_out2 if not self.need_aux_layers[0] else 
-                            torch.cat([self.jian2_static(rurrent_pan_out2), self.jian2_dynamic_aux(support_pan_out2s[0]), *[self.jian2_dynamic(x) for x in support_pan_out2s[1:]]], dim=1) + rurrent_pan_out2)
-                pan_out1 = (torch.cat([self.jian1_static(rurrent_pan_out1), *[self.jian1_dynamic(x) for x in support_pan_out1s]], dim=1) + rurrent_pan_out1 if not self.need_aux_layers[1] else 
-                            torch.cat([self.jian1_static(rurrent_pan_out1), self.jian1_dynamic_aux(support_pan_out1s[0]), *[self.jian1_dynamic(x) for x in support_pan_out1s[1:]]], dim=1) + rurrent_pan_out1)
-                pan_out0 = (torch.cat([self.jian0_static(rurrent_pan_out0), *[self.jian0_dynamic(x) for x in support_pan_out0s]], dim=1) + rurrent_pan_out0 if not self.need_aux_layers[2] else 
-                            torch.cat([self.jian0_static(rurrent_pan_out0), self.jian0_dynamic_aux(support_pan_out0s[0]), *[self.jian0_dynamic(x) for x in support_pan_out0s[1:]]], dim=1) + rurrent_pan_out0)
+                if self.with_short_cut:
+                    pan_out2 = (torch.cat([self.jian2_static(rurrent_pan_out2), *[self.jian2_dynamic(x) for x in support_pan_out2s]], dim=1) + rurrent_pan_out2 if not self.need_aux_layers[0] else 
+                                torch.cat([self.jian2_static(rurrent_pan_out2), self.jian2_dynamic_aux(support_pan_out2s[0]), *[self.jian2_dynamic(x) for x in support_pan_out2s[1:]]], dim=1) + rurrent_pan_out2)
+                    pan_out1 = (torch.cat([self.jian1_static(rurrent_pan_out1), *[self.jian1_dynamic(x) for x in support_pan_out1s]], dim=1) + rurrent_pan_out1 if not self.need_aux_layers[1] else 
+                                torch.cat([self.jian1_static(rurrent_pan_out1), self.jian1_dynamic_aux(support_pan_out1s[0]), *[self.jian1_dynamic(x) for x in support_pan_out1s[1:]]], dim=1) + rurrent_pan_out1)
+                    pan_out0 = (torch.cat([self.jian0_static(rurrent_pan_out0), *[self.jian0_dynamic(x) for x in support_pan_out0s]], dim=1) + rurrent_pan_out0 if not self.need_aux_layers[2] else 
+                                torch.cat([self.jian0_static(rurrent_pan_out0), self.jian0_dynamic_aux(support_pan_out0s[0]), *[self.jian0_dynamic(x) for x in support_pan_out0s[1:]]], dim=1) + rurrent_pan_out0)
+                else:
+                    pan_out2 = (torch.cat([self.jian2_static(rurrent_pan_out2), *[self.jian2_dynamic(x) for x in support_pan_out2s]], dim=1) if not self.need_aux_layers[0] else 
+                                torch.cat([self.jian2_static(rurrent_pan_out2), self.jian2_dynamic_aux(support_pan_out2s[0]), *[self.jian2_dynamic(x) for x in support_pan_out2s[1:]]], dim=1))
+                    pan_out1 = (torch.cat([self.jian1_static(rurrent_pan_out1), *[self.jian1_dynamic(x) for x in support_pan_out1s]], dim=1) if not self.need_aux_layers[1] else 
+                                torch.cat([self.jian1_static(rurrent_pan_out1), self.jian1_dynamic_aux(support_pan_out1s[0]), *[self.jian1_dynamic(x) for x in support_pan_out1s[1:]]], dim=1))
+                    pan_out0 = (torch.cat([self.jian0_static(rurrent_pan_out0), *[self.jian0_dynamic(x) for x in support_pan_out0s]], dim=1) if not self.need_aux_layers[2] else 
+                                torch.cat([self.jian0_static(rurrent_pan_out0), self.jian0_dynamic_aux(support_pan_out0s[0]), *[self.jian0_dynamic(x) for x in support_pan_out0s[1:]]], dim=1))
+        else: # dynamic_fusion=True
+            if self.avg_channel:
+                if self.with_short_cut:
+                    pan_out2 = torch.cat([self.jian2(rurrent_pan_out2), self.jian2_dynamic_fusion(torch.cat([self.jian2(x) for x in support_pan_out2s], dim=1))], dim=1) + rurrent_pan_out2
+                    pan_out1 = torch.cat([self.jian1(rurrent_pan_out1), self.jian1_dynamic_fusion(torch.cat([self.jian1(x) for x in support_pan_out1s], dim=1))], dim=1) + rurrent_pan_out1
+                    pan_out0 = torch.cat([self.jian0(rurrent_pan_out0), self.jian0_dynamic_fusion(torch.cat([self.jian0(x) for x in support_pan_out0s], dim=1))], dim=1) + rurrent_pan_out0
+                else:
+                    pan_out2 = torch.cat([self.jian2(rurrent_pan_out2), self.jian2_dynamic_fusion(torch.cat([self.jian2(x) for x in support_pan_out2s], dim=1))], dim=1)
+                    pan_out1 = torch.cat([self.jian1(rurrent_pan_out1), self.jian1_dynamic_fusion(torch.cat([self.jian1(x) for x in support_pan_out1s], dim=1))], dim=1)
+                    pan_out0 = torch.cat([self.jian0(rurrent_pan_out0), self.jian0_dynamic_fusion(torch.cat([self.jian0(x) for x in support_pan_out0s], dim=1))], dim=1)
             else:
-                pan_out2 = (torch.cat([self.jian2_static(rurrent_pan_out2), *[self.jian2_dynamic(x) for x in support_pan_out2s]], dim=1) if not self.need_aux_layers[0] else 
-                            torch.cat([self.jian2_static(rurrent_pan_out2), self.jian2_dynamic_aux(support_pan_out2s[0]), *[self.jian2_dynamic(x) for x in support_pan_out2s[1:]]], dim=1))
-                pan_out1 = (torch.cat([self.jian1_static(rurrent_pan_out1), *[self.jian1_dynamic(x) for x in support_pan_out1s]], dim=1) if not self.need_aux_layers[1] else 
-                            torch.cat([self.jian1_static(rurrent_pan_out1), self.jian1_dynamic_aux(support_pan_out1s[0]), *[self.jian1_dynamic(x) for x in support_pan_out1s[1:]]], dim=1))
-                pan_out0 = (torch.cat([self.jian0_static(rurrent_pan_out0), *[self.jian0_dynamic(x) for x in support_pan_out0s]], dim=1) if not self.need_aux_layers[2] else 
-                            torch.cat([self.jian0_static(rurrent_pan_out0), self.jian0_dynamic_aux(support_pan_out0s[0]), *[self.jian0_dynamic(x) for x in support_pan_out0s[1:]]], dim=1))
-
+                if self.with_short_cut:
+                    pan_out2 = torch.cat([self.jian2_static(rurrent_pan_out2), self.jian2_dynamic_fusion(torch.cat([self.jian2_dynamic(x) for x in support_pan_out2s], dim=1))], dim=1) + rurrent_pan_out2
+                    pan_out1 = torch.cat([self.jian1_static(rurrent_pan_out1), self.jian1_dynamic_fusion(torch.cat([self.jian1_dynamic(x) for x in support_pan_out1s], dim=1))], dim=1) + rurrent_pan_out1
+                    pan_out0 = torch.cat([self.jian0_static(rurrent_pan_out0), self.jian0_dynamic_fusion(torch.cat([self.jian0_dynamic(x) for x in support_pan_out0s], dim=1))], dim=1) + rurrent_pan_out0
+                else:
+                    pan_out2 = torch.cat([self.jian2_static(rurrent_pan_out2), self.jian2_dynamic_fusion(torch.cat([self.jian2_dynamic(x) for x in support_pan_out2s], dim=1))], dim=1)
+                    pan_out1 = torch.cat([self.jian1_static(rurrent_pan_out1), self.jian1_dynamic_fusion(torch.cat([self.jian1_dynamic(x) for x in support_pan_out1s], dim=1))], dim=1)
+                    pan_out0 = torch.cat([self.jian0_static(rurrent_pan_out0), self.jian0_dynamic_fusion(torch.cat([self.jian0_dynamic(x) for x in support_pan_out0s], dim=1))], dim=1)
         outputs = (pan_out2, pan_out1, pan_out0)
         rurrent_pan_outs = (rurrent_pan_out2, rurrent_pan_out1, rurrent_pan_out0)
 
