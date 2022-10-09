@@ -30,6 +30,7 @@ class YOLOXLONGSHORTV3(nn.Module):
         width=1.0, 
         act="silu",
         with_short_cut=False,
+        long_cfg=None,
     ):
         """Summary
         
@@ -37,7 +38,7 @@ class YOLOXLONGSHORTV3(nn.Module):
             long_backbone (None, optional): Description
             short_backbone (None, optional): Description
             head (None, optional): Description
-            merge_form (str, optional): "add" or "concat" or "pure_concat"
+            merge_form (str, optional): "add" or "concat" or "pure_concat" or "long_fusion"
             in_channels (list, optional): Description
         """
         super().__init__()
@@ -77,6 +78,31 @@ class YOLOXLONGSHORTV3(nn.Module):
                         stride=1,
                         act=act,
                     )
+        elif merge_form == "long_fusion":
+            assert long_cfg is not None and "out_channels" in long_cfg
+            self.jian2 = BaseConv(
+                        in_channels=sum([x[0][0]*x[1] for x in long_cfg["out_channels"]]),
+                        out_channels=int(in_channels[0] * width) // 2,
+                        ksize=1,
+                        stride=1,
+                        act=act,
+                    )
+
+            self.jian1 = BaseConv(
+                        in_channels=sum([x[0][1]*x[1] for x in long_cfg["out_channels"]]),
+                        out_channels=int(in_channels[1] * width) // 2,
+                        ksize=1,
+                        stride=1,
+                        act=act,
+                    )
+
+            self.jian0 = BaseConv(
+                        in_channels=sum([x[0][2]*x[1] for x in long_cfg["out_channels"]]),
+                        out_channels=int(in_channels[2] * width) // 2,
+                        ksize=1,
+                        stride=1,
+                        act=act,
+                    )
 
     def forward(self, x, targets=None, buffer=None, mode='off_pipe'):
         # fpn output content features of [dark3, dark4, dark5]
@@ -101,6 +127,11 @@ class YOLOXLONGSHORTV3(nn.Module):
                         fpn_outs_1 = torch.cat([short_fpn_outs[1], long_fpn_outs[1]], dim=1)
                         fpn_outs_0 = torch.cat([short_fpn_outs[2], long_fpn_outs[2]], dim=1)
                         fpn_outs = (fpn_outs_2, fpn_outs_1, fpn_outs_0)
+                    elif self.merge_form == "long_fusion":
+                        fpn_outs_2 = torch.cat([short_fpn_outs[0], self.jian2(long_fpn_outs[0])], dim=1)
+                        fpn_outs_1 = torch.cat([short_fpn_outs[1], self.jian1(long_fpn_outs[1])], dim=1)
+                        fpn_outs_0 = torch.cat([short_fpn_outs[2], self.jian0(long_fpn_outs[2])], dim=1)
+                        fpn_outs = (fpn_outs_2, fpn_outs_1, fpn_outs_0)
                     else:
                         raise Exception(f'merge_form must be in ["add", "concat"]')
             else:
@@ -119,6 +150,12 @@ class YOLOXLONGSHORTV3(nn.Module):
                         fpn_outs_2 = torch.cat([short_fpn_outs[0], long_fpn_outs[0]], dim=1)
                         fpn_outs_1 = torch.cat([short_fpn_outs[1], long_fpn_outs[1]], dim=1)
                         fpn_outs_0 = torch.cat([short_fpn_outs[2], long_fpn_outs[2]], dim=1)
+                        fpn_outs = (fpn_outs_2, fpn_outs_1, fpn_outs_0)
+                        fpn_outs = [x + y for x, y in zip(fpn_outs, rurrent_pan_outs)]
+                    elif self.merge_form == "long_fusion":
+                        fpn_outs_2 = torch.cat([short_fpn_outs[0], self.jian2(long_fpn_outs[0])], dim=1)
+                        fpn_outs_1 = torch.cat([short_fpn_outs[1], self.jian1(long_fpn_outs[1])], dim=1)
+                        fpn_outs_0 = torch.cat([short_fpn_outs[2], self.jian0(long_fpn_outs[2])], dim=1)
                         fpn_outs = (fpn_outs_2, fpn_outs_1, fpn_outs_0)
                         fpn_outs = [x + y for x, y in zip(fpn_outs, rurrent_pan_outs)]
                     else:
