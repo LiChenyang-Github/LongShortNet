@@ -28,6 +28,7 @@ class DFPPAFPNLONGV3(nn.Module):
         frame_num=2,
         with_short_cut=True,
         # dynamic_fusion=False,
+        merge_form="pure_concat", # "pure_concat", "add"
         out_channels=[((64, 128, 256), 1), ] # [((c11, c12, c13), n1), ((c21, c22, c23), n2), ...] c表示各层输出的通道数，n表示作用于几张frame，即不同的frame可能对应不同的conv
 
     ):
@@ -36,6 +37,7 @@ class DFPPAFPNLONGV3(nn.Module):
         self.in_channels = in_channels
         self.frame_num = frame_num
         self.with_short_cut = with_short_cut
+        self.merge_form = merge_form
         self.out_channels = out_channels
         self.conv_group_num = len(out_channels)
         self.conv_group_dict = defaultdict(dict)
@@ -120,14 +122,27 @@ class DFPPAFPNLONGV3(nn.Module):
             frame_start_id += group_frame_num
 
         if self.with_short_cut:
-            pan_out2 = torch.cat(pan_out2s, dim=1) + rurrent_pan_out2
-            pan_out1 = torch.cat(pan_out1s, dim=1) + rurrent_pan_out1
-            pan_out0 = torch.cat(pan_out0s, dim=1) + rurrent_pan_out0
+            if self.merge_form == "pure_concat":
+                pan_out2 = torch.cat(pan_out2s, dim=1) + rurrent_pan_out2
+                pan_out1 = torch.cat(pan_out1s, dim=1) + rurrent_pan_out1
+                pan_out0 = torch.cat(pan_out0s, dim=1) + rurrent_pan_out0
+            elif self.merge_form == "add":
+                pan_out2 = torch.sum(torch.stack(pan_out2s), dim=0) + rurrent_pan_out2
+                pan_out1 = torch.sum(torch.stack(pan_out1s), dim=0) + rurrent_pan_out1
+                pan_out0 = torch.sum(torch.stack(pan_out0s), dim=0) + rurrent_pan_out0
+            else:
+                raise Exception(f'merge_form must be in ["pure_concat", "add"].')
         else:
-            pan_out2 = torch.cat(pan_out2s, dim=1)
-            pan_out1 = torch.cat(pan_out1s, dim=1)
-            pan_out0 = torch.cat(pan_out0s, dim=1)
-
+            if self.merge_form == "pure_concat":
+                pan_out2 = torch.cat(pan_out2s, dim=1)
+                pan_out1 = torch.cat(pan_out1s, dim=1)
+                pan_out0 = torch.cat(pan_out0s, dim=1)
+            elif self.merge_form == "add":
+                pan_out2 = torch.sum(torch.stack(pan_out2s), dim=0)
+                pan_out1 = torch.sum(torch.stack(pan_out1s), dim=0)
+                pan_out0 = torch.sum(torch.stack(pan_out0s), dim=0)
+            else:
+                raise Exception(f'merge_form must be in ["pure_concat", "add"].')
         outputs = (pan_out2, pan_out1, pan_out0)
 
         return outputs
