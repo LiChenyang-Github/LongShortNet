@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 # Copyright (c) 2014-2022 Megvii Inc. All rights reserved.
+# Copyright (c) DAMO Academy, Alibaba Group and its affiliates.
 
 import torch
 import torch.nn as nn

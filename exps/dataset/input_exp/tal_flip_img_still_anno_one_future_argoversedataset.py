@@ -1,3 +1,4 @@
+# Copyright (c) DAMO Academy, Alibaba Group and its affiliates.
 import cv2
 import numpy as np
 # import json

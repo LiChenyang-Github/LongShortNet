@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # Copyright (c) Megvii, Inc. and its affiliates.
+# Copyright (c) DAMO Academy, Alibaba Group and its affiliates.
 
 import cv2
 import numpy as np
