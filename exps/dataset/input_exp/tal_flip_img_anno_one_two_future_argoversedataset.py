@@ -1,4 +1,5 @@
 # Modified based on tal_flip_img_one_two_future_argoversedataset.py. Support onex and twox(image and annotations) training in one dataset.
+# Copyright (c) DAMO Academy, Alibaba Group and its affiliates.
 import cv2
 import copy
 import numpy as np
