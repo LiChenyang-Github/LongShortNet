@@ -13,10 +13,10 @@
 
 |Model |size |velocity | sAP<br>0.5:0.95 | sAP50 |sAP75| weights |
 | ------        |:---: | :---:       |:---:     |:---:  | :---: | :----: |
-|[LongShortNet-S](./cfgs/longshortnet/s_s50_onex_dfp_tal_flip_s_1_d_1_l_3_d_1_yolox_shortcut_ep8.py)    |600×960  |1x      |29.8     |50.4 | 29.5 |[link](https://to/be/released) |
-|[LongShortNet-M](./cfgs/longshortnet/m_s50_onex_dfp_tal_flip_s_1_d_1_l_3_d_1_yolox_shortcut_ep8.py)    |600×960  |1x      |34.1     |54.8 | 34.6 |[link](https://to/be/released) |
-|[LongShortNet-L](./cfgs/longshortnet/l_s50_onex_dfp_tal_flip_s_1_d_1_l_3_d_1_yolox_shortcut_ep8.py)    |600×960  |1x  |37.1 |57.8| 37.7 |[link](https://to/be/released) |
-|[LongShortNet-L](./cfgs/longshortnet/l_s50_onex_dfp_tal_flip_s_1_d_1_l_3_d_1_yolox_shortcut_ep8_1200x1920.py)   |1200×1920  |1x      | **42.7** | **65.4** | **45.0** |[link](https://to/be/released) |
+|[LongShortNet-S](./cfgs/longshortnet/s_s50_onex_dfp_tal_flip_s_1_d_1_l_3_d_1_yolox_shortcut_ep8.py)    |600×960  |1x      |29.8     |50.4 | 29.5 |[link](https://drive.google.com/file/d/13ESdjetcccOKnU0fg54b6czuxBH76C_7/view?usp=share_link) |
+|[LongShortNet-M](./cfgs/longshortnet/m_s50_onex_dfp_tal_flip_s_1_d_1_l_3_d_1_yolox_shortcut_ep8.py)    |600×960  |1x      |34.1     |54.8 | 34.6 |[link](https://drive.google.com/file/d/1AFzD2bTSTtuCCWBk2AnU1t9uHVGD1cM_/view?usp=share_link) |
+|[LongShortNet-L](./cfgs/longshortnet/l_s50_onex_dfp_tal_flip_s_1_d_1_l_3_d_1_yolox_shortcut_ep8.py)    |600×960  |1x  |37.1 |57.8| 37.7 |[link](https://drive.google.com/file/d/15D6VL_QcL1qBYjBmZCAEa0PNp0TM67vg/view?usp=share_link) |
+|[LongShortNet-L](./cfgs/longshortnet/l_s50_onex_dfp_tal_flip_s_1_d_1_l_3_d_1_yolox_shortcut_ep8_1200x1920.py)   |1200×1920  |1x      | **42.7** | **65.4** | **45.0** |[link](https://drive.google.com/file/d/1gI5a2Pf1MOnCkxeNIHLnbgesEOZEXER2/view?usp=share_link) |
 
 ## Quick Start
 
