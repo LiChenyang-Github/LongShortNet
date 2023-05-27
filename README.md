@@ -54,11 +54,8 @@ Please cite the following paper if this repo helps your research:
                Xuansong Xie},
   title     = {LongShortNet: Exploring Temporal and Semantic Features Fusion in Streaming
                Perception},
-  journal   = {CoRR},
-  volume    = {abs/2210.15518},
-  year      = {2022},
-  url       = {https://doi.org/10.48550/arXiv.2210.15518},
-  doi       = {10.48550/arXiv.2210.15518}
+  booktitle = {ICASSP},
+  year      = {2023}
 }
 ```
 
