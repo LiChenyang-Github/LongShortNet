@@ -1,7 +1,8 @@
 # LongShortNet
 
 ## LongShortNet: Exploring Temporal and Semantic Features Fusion in Streaming Perception
-> **ICASSP 2023**
+
+
 ## Introduction
 
 In the sphere of autonomous driving, streaming perception plays a pivotal role. It's vital to achieve a fine balance between the system's latency and accuracy. **LongShortNet** emerges as an innovative model, intertwining both long-term temporal dynamics and short-term spatial semantics, hence fostering enhanced real-time perception. This fusion leads to a model that promises greater efficacy in complex autonomous driving scenarios.
