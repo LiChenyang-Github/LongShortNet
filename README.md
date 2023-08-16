@@ -1,9 +1,4 @@
-# LongShortNet
-
-## LongShortNet: Exploring Temporal and Semantic Features Fusion in Streaming Perception
-
-
-## Introduction
+# LongShortNet: Exploring Temporal and Semantic Features Fusion in Streaming Perception
 
 In the sphere of autonomous driving, streaming perception plays a pivotal role. It's vital to achieve a fine balance between the system's latency and accuracy. **LongShortNet** emerges as an innovative model, intertwining both long-term temporal dynamics and short-term spatial semantics, hence fostering enhanced real-time perception. This fusion leads to a model that promises greater efficacy in complex autonomous driving scenarios.
 
@@ -67,20 +62,13 @@ bash run_eval.sh
 ## Citation
 Please cite the following paper if this repo helps your research:
 ```bibtex
-@article{LongShortNet,
-  author    = {Chenyang Li and
-               Zhi{-}Qi Cheng and
-               Jun{-}Yan He and
-               Pengyu Li and
-               Bin Luo and
-               Han{-}Yuan Chen and
-               Yifeng Geng and
-               Jin{-}Peng Lan and
-               Xuansong Xie},
-  title     = {LongShortNet: Exploring Temporal and Semantic Features Fusion in Streaming
-               Perception},
-  booktitle = {ICASSP},
-  year      = {2023}
+@inproceedings{li2023longshortnet,
+  title={Longshortnet: Exploring temporal and semantic features fusion in streaming perception},
+  author={Li, Chenyang and Cheng, Zhi-Qi and He, Jun-Yan and Li, Pengyu and Luo, Bin and Chen, Hanyuan and Geng, Yifeng and Lan, Jin-Peng and Xie, Xuansong},
+  booktitle={ICASSP 2023-2023 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)},
+  pages={1--5},
+  year={2023},
+  organization={IEEE}
 }
 ```
 
