@@ -15,7 +15,7 @@ In the sphere of autonomous driving, streaming perception plays a pivotal role. 
 
 ## Methodology
 
-LongShortNet embarks on a unique fusion strategy, the **LongShort Feature Module (LSFM)**, which is the crux of our architecture. LSFM employs multiple fusion schemes to ensure the effective amalgamation of features, providing the network the ability to react dynamically to real-time changes. The essence of LongShortNet is its capability to seamlessly combine temporal and semantic features. The methodology is split into two main components as illustrated below:
+LongShortNet embarks on a unique fusion strategy, the **Long Short Fusion Module(LSFM)**, which is the crux of our architecture. LSFM employs multiple fusion schemes to ensure the effective amalgamation of features, providing the network the ability to react dynamically to real-time changes. The essence of LongShortNet is its capability to seamlessly combine temporal and semantic features. The methodology is split into two main components as illustrated below:
 
 <p align="center">
   <img src="https://github.com/zhiqic/LongShortNet/assets/65300431/4ceb546e-2daa-4588-b269-3df084eb2f39" alt="Figure 3a" width="774"/>
